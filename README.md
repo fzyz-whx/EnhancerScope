@@ -25,6 +25,38 @@
 模型为 M2 基准中 Dev 侧最优的 DeepSTARR 风格 CNN；为何网页不直接跑 LoRA DNABERT-2（481MB）、
 以及两者的 ONNX 数值一致性，见 [webapp/README](webapp/README.md) 与 `results/onnx_parity.json`。
 
+## MCP 工具层（给 LLM agent 用）
+
+一条命令启动（stdio 传输）：
+
+```bash
+uv run enhancerscope-mcp          # 或 uvx --from . enhancerscope-mcp
+```
+
+接入任意 MCP client（Claude Desktop / Cline / ZCode 都在 `mcpServers` 里加同样的块）：
+
+```json
+{
+  "mcpServers": {
+    "enhancerscope": {
+      "command": "uv",
+      "args": ["run", "--project", "/path/to/EnhancerScope", "enhancerscope-mcp"]
+    }
+  }
+}
+```
+
+| 工具 | 入参 | 返回 |
+|---|---|---|
+| `predict_activity` | `sequence`（A/C/G/T，<249 补 N、>249 截断并标注） | Dev/Hk 活性（log2 富集） |
+| `explain_sequence` | `sequence`, `top_k=10` | 影响最大的位点（单碱基饱和突变 \|Δ预测\|，与 M4 归因同源） |
+| `batch_scan` | `fasta`（FASTA 文本或文件路径）, `top_k=3` | 逐条预测 + 排名 + 判定 |
+
+验证与演示：
+- 协议层冒烟：`uv run python scripts/mcp_stdio_check.py`（initialize → tools/list → tools/call）
+- agent 调用演示记录：[docs/assets/mcp_demo.txt](docs/assets/mcp_demo.txt)（模拟"分析这 5 条序列"→ 批量扫描 → 归因 → 汇总报告）
+- 单元测试：`uv run pytest tests/test_mcp_tools.py -q`（含入参校验与 schema 断言）
+
 ## Benchmark（test split，Spearman ρ，越大越好）
 
 | 模型 | Dev（发育型） | Hk（管家型） | 说明 |
