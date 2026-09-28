@@ -34,3 +34,7 @@ data/manifests/*
 !data/manifests/*.sha256
 !results/lora.csv
 !results/lora_summary.md
+!results/interpretability
+results/interpretability/*
+!results/interpretability/*.json
+!results/interpretability/*.csv
