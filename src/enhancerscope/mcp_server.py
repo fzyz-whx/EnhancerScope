@@ -137,9 +137,19 @@ def explain_sequence_impl(
 
 
 def parse_fasta(text_or_path: str) -> list[dict[str, str]]:
-    """FASTA 文本或文件路径 → [{"id","sequence"}]。"""
-    p = Path(text_or_path)
-    text = p.read_text(encoding="utf-8") if p.exists() and p.is_file() else text_or_path
+    """FASTA 文本或文件路径 → [{"id","sequence"}]。
+
+    路径探测要防御：把整段 FASTA 文本当路径传给 Path.exists() 在 Linux 上会抛
+    OSError(ENAMETOOLONG)——CI 抓到的跨平台 bug（devlog M6 第 21 坑）。
+    """
+    text = text_or_path
+    if chr(10) not in text_or_path and len(text_or_path) < 4096:
+        try:
+            p = Path(text_or_path)
+            if p.is_file():
+                text = p.read_text(encoding="utf-8")
+        except OSError:
+            pass
     records: list[dict[str, str]] = []
     cur_id: str | None = None
     chunks: list[str] = []

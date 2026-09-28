@@ -375,3 +375,10 @@ results/baseline.csv。
 ### 决策记录
 `fastmcp` + `onnxruntime` 放在**主依赖**（不是 ml 组）：MCP 层是一等交付物，CI 需要真跑工具测试；
 代价是 CI 安装体积变大（可接受）。
+
+### M6 修复记录（CI 抓到的跨平台 bug）
+21. **`parse_fasta` 在 Linux 上崩**：把整段 FASTA 文本当路径传给 `Path.exists()` →
+    `OSError: [Errno 36] File name too long`（Windows 不报，CI 的 ubuntu 才暴露）。
+    修法：只在"无换行且长度 <4096"时才探测路径，并把 `OSError` 一并兜住。
+    → 教训：**本地绿 ≠ CI 绿**；另外这一轮我误在 CI 失败时合并了 PR#7（流程失误，已记录），
+    修复走独立分支 `fix/m6-parse-fasta` + 新 PR 重新过 CI。
