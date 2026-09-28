@@ -38,6 +38,10 @@ ml = [
     "triton-windows>=3.8.0.post28 ; sys_platform == 'win32'",
     "protobuf>=7.36.2",
     "peft>=0.21.0",
+    "onnx>=1.23.0",
+    "onnxruntime>=1.30.0",
+    "onnxscript>=0.7.2",
+    "onnxconverter-common>=1.16.0",
 ]
 
 [build-system]
