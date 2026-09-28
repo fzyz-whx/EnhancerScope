@@ -1,0 +1,140 @@
+{
+  "case": 2,
+  "id": "chr2R_13586410_13586658_-_positive_peaks",
+  "sequence": "TAGTTGAGAATTCAAGCAGAAAACGCGACCGTCCATTTTGAACGAAAAAAAGAAGTGGAAGAATGCACGTGGCGATGTGACCGCACTACGATTCTGTAACGATAATTCATTTATCGAGCATGTAATCGATAGTTATAGAGGGTAGTTCCAAGAATCGTGTGCCACGGAAAGTGTAAATAGCTTGTTTTTTAGTAATCATTATTTATAGCATCGGCATTTTAAATAAAGGTAAATGCGCTTATAGCAATA",
+  "wildtype_pred": {
+    "Dev": 3.434541702270508,
+    "Hk": 6.254923343658447
+  },
+  "truth": {
+    "Dev": 4.18193824336604,
+    "Hk": 6.59069874760142
+  },
+  "top_attributed_positions": {
+    "Dev": [
+      126,
+      127,
+      128,
+      76,
+      73,
+      129,
+      125,
+      69
+    ],
+    "Hk": [
+      126,
+      127,
+      128,
+      76,
+      129,
+      73,
+      125,
+      69
+    ]
+  },
+  "motif_hits": [
+    {
+      "motif": "MA0218.1_ct",
+      "start": 37,
+      "end": 43,
+      "score": 10.064
+    },
+    {
+      "motif": "MA0231.1_lbe",
+      "start": 96,
+      "end": 102,
+      "score": 7.761
+    },
+    {
+      "motif": "MA0536.1_pnr",
+      "start": 123,
+      "end": 134,
+      "score": 14.606
+    },
+    {
+      "motif": "MA0231.1_lbe",
+      "start": 192,
+      "end": 198,
+      "score": 8.346
+    },
+    {
+      "motif": "MA0232.1_lbl",
+      "start": 192,
+      "end": 198,
+      "score": 8.253
+    },
+    {
+      "motif": "MA0170.1_C15",
+      "start": 218,
+      "end": 225,
+      "score": 10.145
+    }
+  ],
+  "overlap_metrics": {
+    "Dev": {
+      "motif_coverage": 0.1446,
+      "top_precision": 0.36,
+      "hit_coverage": 0.25,
+      "enrichment": 2.49
+    },
+    "Hk": {
+      "motif_coverage": 0.1446,
+      "top_precision": 0.4,
+      "hit_coverage": 0.2778,
+      "enrichment": 2.767
+    }
+  },
+  "attribution_agreement_spearman": 0.735,
+  "occlusion_top": [
+    {
+      "start": 126,
+      "delta_Dev": -3.218,
+      "delta_Hk": -3.757
+    },
+    {
+      "start": 123,
+      "delta_Dev": -3.041,
+      "delta_Hk": -3.441
+    },
+    {
+      "start": 99,
+      "delta_Dev": -3.29,
+      "delta_Hk": -3.403
+    },
+    {
+      "start": 111,
+      "delta_Dev": -3.048,
+      "delta_Hk": -3.217
+    },
+    {
+      "start": 114,
+      "delta_Dev": -3.009,
+      "delta_Hk": -3.159
+    },
+    {
+      "start": 96,
+      "delta_Dev": -3.062,
+      "delta_Hk": -3.075
+    },
+    {
+      "start": 120,
+      "delta_Dev": -2.777,
+      "delta_Hk": -2.99
+    },
+    {
+      "start": 108,
+      "delta_Dev": -2.923,
+      "delta_Hk": -2.98
+    },
+    {
+      "start": 102,
+      "delta_Dev": -2.764,
+      "delta_Hk": -2.691
+    },
+    {
+      "start": 78,
+      "delta_Dev": -2.599,
+      "delta_Hk": -2.423
+    }
+  ]
+}
