@@ -339,3 +339,39 @@ results/baseline.csv。
 - 线上截图入库 docs/assets/webapp_online.png
 - 坑 18：`gh pr create --body "..."` 的反引号被 shell 执行（误触发 npm install 并生成野 package-lock.json）——
   教训：含反引号/`$()` 的长文本一律用 `--body-file`
+
+## 2026-09-29 · M6 开工前计划（MCP 工具层）
+
+**目标**：FastMCP server 暴露 3 个工具，任意 LLM agent 可调用；一条命令启动；工具测试在 CI 跑；
+端到端演示（"分析这 5 条增强子序列" → 自动调用 → 汇总报告）。
+
+**设计**
+- 模型：复用 M5 的 `webapp/public/cnn.onnx`（0.81MB，已入库）→ 克隆即用，无需下载权重
+- 工具：`predict_activity(sequence)` / `explain_sequence(sequence, top_k)`（逐碱基突变敏感度）/
+  `batch_scan(fasta 文本或路径, top_k)`（批量 + 汇总）
+- **入参校验**：只接受 ACGT（大小写不敏感）；长度 <249 补 N、>249 截断（返回里明确标注处理方式）
+- 依赖策略：`fastmcp` + `onnxruntime` 提升为**主依赖**（不是 ml 组）——这样 CI 能真正跑工具测试
+- 启动：`uv run enhancerscope-mcp`（entry point），stdio 传输
+- 演示：`scripts/mcp_demo.py` 模拟 agent 调用流程并产出汇总报告（文本入库，作为"演示脚本"交付）
+
+## 2026-09-29 · M6 完成记录（MCP 工具层）
+
+### 交付
+- `src/enhancerscope/mcp_server.py`：FastMCP 三个工具（predict_activity / explain_sequence / batch_scan），
+  复用 M5 的 `webapp/public/cnn.onnx`（0.81MB 已入库）→ **克隆即用，无需下载权重**
+- 入口：`uv run enhancerscope-mcp`（一条命令，stdio）
+- 测试：`tests/test_mcp_tools.py` 14 个用例（入参校验/回归值/FASTA 解析/schema 断言），全套 34 个测试在 CI 跑
+- 协议层冒烟：`scripts/mcp_stdio_check.py` —— **真的拉起 server** 走 initialize → tools/list → tools/call
+  （实测输出：serverInfo EnhancerScope v4.0.10；三个工具名正确；predict_activity 返回 dev -0.8812/hk -0.489）
+- agent 演示：`scripts/mcp_demo.py` → 记录入库 `docs/assets/mcp_demo.txt`（5 条真实 test 序列的批量扫描 + top 归因 + 汇总表）
+- README 增加 5 分钟接入指南（含 Claude/Cline/ZCode 的 mcpServers 配置片段）
+
+### 坑（第 19-20 项）
+19. **fastmcp 的 API 与文档记忆不一致**：`get_tools()` 不存在（是 `list_tools()`），tool 对象的 schema 在
+    `parameters`（dict）而非 `inputSchema` —— 测试先跑真实 introspection 再写断言，避免凭记忆写 API
+20. **多行 import 的 noqa 必须放第一行**：black 折行后 `)  # noqa: E402` 不生效（ruff 报在首行）——
+    第二次踩到，已固化写法
+
+### 决策记录
+`fastmcp` + `onnxruntime` 放在**主依赖**（不是 ml 组）：MCP 层是一等交付物，CI 需要真跑工具测试；
+代价是 CI 安装体积变大（可接受）。

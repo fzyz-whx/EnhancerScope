@@ -1,0 +1,102 @@
+# MCP 端到端演示记录（scripts/mcp_demo.py）
+
+模拟请求：*"帮我分析这 5 条增强子序列，看看哪条最可能是强增强子，并解释第一名为什么强。"*
+
+## ① agent 调用工具 `batch_scan`
+
+入参：FASTA（5 条 test 序列，真实数据）
+
+```json
+{
+  "n_sequences": 5,
+  "top_dev": [
+    "chr2R_11957453_11957701_-_peak_849bp_region",
+    "chr2R_10695401_10695649_-_negative",
+    "chr2R_13990972_13991220_-_peak_849bp_region"
+  ],
+  "top_hk": [
+    "chr2R_11957453_11957701_-_peak_849bp_region",
+    "chr2R_10695401_10695649_-_negative",
+    "chr2R_15485701_15485949_-_negative"
+  ],
+  "model": "DeepSTARR-style CNN (ONNX, 0.81MB)"
+}
+```
+
+## ② agent 对排名第一的 `chr2R_11957453_11957701_-_peak_849bp_region` 调用 `explain_sequence`
+
+```json
+{
+  "dev_log2": 2.9185,
+  "hk_log2": 0.4161,
+  "top_sensitive_positions": {
+    "dev": [
+      {
+        "pos": 124,
+        "base": "A",
+        "abs_delta": 1.6297
+      },
+      {
+        "pos": 25,
+        "base": "C",
+        "abs_delta": 1.4925
+      },
+      {
+        "pos": 23,
+        "base": "A",
+        "abs_delta": 1.4877
+      },
+      {
+        "pos": 26,
+        "base": "G",
+        "abs_delta": 1.4613
+      },
+      {
+        "pos": 24,
+        "base": "T",
+        "abs_delta": 1.3769
+      }
+    ],
+    "hk": [
+      {
+        "pos": 124,
+        "base": "A",
+        "abs_delta": 0.6193
+      },
+      {
+        "pos": 25,
+        "base": "C",
+        "abs_delta": 0.5598
+      },
+      {
+        "pos": 26,
+        "base": "G",
+        "abs_delta": 0.5237
+      },
+      {
+        "pos": 23,
+        "base": "A",
+        "abs_delta": 0.505
+      },
+      {
+        "pos": 24,
+        "base": "T",
+        "abs_delta": 0.4627
+      }
+    ]
+  },
+  "method": "single-base saturation mutagenesis (747 variants), same as docs/interpretability.md"
+}
+```
+
+## ③ agent 汇总报告
+
+| 序列 | Dev 预测 | Hk 预测 | 真实 Dev | 真实 Hk | 判定 |
+|---|---|---|---|---|---|
+| chr2R_13990972_13991220_-_peak_849bp_region | 1.56 | -0.37 | 0.93 | -0.62 | 中等 |
+| chr2R_16737375_16737623_-_peak_849bp_region | -0.44 | -0.42 | -1.23 | -0.58 | 弱/无活性 |
+| chr2R_15485701_15485949_-_negative | -0.31 | -0.27 | -1.06 | -0.50 | 弱/无活性 |
+| chr2R_11957453_11957701_-_peak_849bp_region | 2.92 | 0.42 | 4.02 | 0.33 | 中等 |
+| chr2R_10695401_10695649_-_negative | 1.74 | 0.22 | 1.09 | 0.43 | 中等 |
+
+**结论**：`chr2R_11957453_11957701_-_peak_849bp_region` 的 Hk 预测最高（0.42）；归因显示最敏感的位点是 [{'pos': 124, 'base': 'A', 'abs_delta': 0.6193}, {'pos': 25, 'base': 'C', 'abs_delta': 0.5598}, {'pos': 26, 'base': 'G', 'abs_delta': 0.5237}]。（预测值与真实标签逐条对照——这批序列模型预测方向正确的不在少数，但也存在过度预测，方法与局限见 docs/interpretability.md。）

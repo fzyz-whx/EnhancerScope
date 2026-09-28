@@ -7,8 +7,10 @@ authors = [{ name = "fzyz-whx" }]
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
+    "fastmcp>=4.0.10",
     "matplotlib>=3.11.2",
     "numpy>=2.4.6",
+    "onnxruntime>=1.30.0",
     "pandas>=3.0.6",
     "pyarrow>=25.0.1",
     "scipy>=1.16",
@@ -16,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 enhancerscope-demo = "enhancerscope.demo:main"
+enhancerscope-mcp = "enhancerscope.mcp_server:main"
 
 [dependency-groups]
 dev = [
