@@ -71,3 +71,13 @@
 ### 下一步（M2）
 k-mer+GBDT / 轻量 CNN / 零样本 LM 三条 baseline，统一 Spearman/Pearson/RMSE，结果落
 results/baseline.csv。
+
+## 2026-09-28 · M2 开工前计划
+
+**目标**：固定划分上三条 baseline——① k-mer+LightGBM（CPU）② DeepSTARR 风格轻量 CNN（GPU）③ gDNA LM 零样本（embedding+线性探针，不微调）。统一指标 Spearman/Pearson/RMSE，产出 results/baseline.csv + README benchmark 表。
+
+**关键决策（预判）**：
+- torch 装 cu128（RTX 5060=Blackwell sm_120，PyTorch≥2.7 才支持），~2.5GB 下载与写代码并行
+- ③ 零样本打分：伪对数似然需 249×3 次前向 × 4 万序列 = 不可行；用 **embedding(均值池化)+Ridge 探针**（goal 明示允许），train 侧抽样 5 万条提特征（8GB 显存约束，如实记录）
+- CNN 用 3 个种子报均值±std；GBDT/Ridge 确定性单种子
+- 防泄漏红线：所有模型只见 train split，chr2R 的 valid/test 仅用于评估
