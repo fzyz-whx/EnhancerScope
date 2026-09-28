@@ -215,3 +215,29 @@ results/baseline.csv。
    `torch.load` 直接 `UnpicklingError`（seed 43/44 因此 0 epoch 崩溃）→ `torch.load(..., weights_only=False)`（本地可信缓存）
 8. **微调权重未持久化**（自查发现）：best_state 只在内存 → 补 `data/models/finetuned/lora_{model}_seed{N}.pt`
    （LoRA adapter + pooler，~2.4MB，不入库），M4 可解释性与 M5 ONNX 导出依赖它
+
+## 2026-09-29 · M3 完成记录
+
+### 结果（test，3 seeds 均值±std）
+| 模型 | Dev ρ | Hk ρ | 时长/run | 显存峰值 |
+|---|---|---|---|---|
+| **LoRA DNABERT-2**（117M，微调 0.50%） | **0.6214 ± 0.0088** | **0.5722 ± 0.0044** | 47.1min | 2.67GB |
+| LoRA HyenaDNA（3.3M） | 0.2845 ± 0.0021 | 0.2486 ± 0.0008 | 8.9min | 2.66GB |
+
+### 核心结论
+1. 微调把 DNABERT-2 从零样本 0.428/0.363 提升到 0.6214/0.5722（+0.19/+0.21）——微调价值被量化
+2. LoRA 只调 0.5% 参数即拿下 Hk 最优（> CNN 全量从零训练），Dev 与 CNN 差 0.018 —— 预训练价值直接证据
+3. **HyenaDNA 是负结果**（低于 k-mer 与零样本）：loss 几乎没学动（2.46→2.42）。归因假设：
+   容量（3.3M vs 117M）/ 单碱基 tokenizer（249 tokens vs BPE 63）/ 超参为 DNABERT-2 调的 /
+   target 模块未消融。未做后续调优，如实记录（docs/experiments.md §4.1）
+
+### 新增坑（第 9-10 坑）
+9. **peft 包装器会透传 attention_mask**：HyenaDNA 底层 forward 不接受该参数，而 peft 的包装 forward
+   签名里带它并显式透传 → 连"去掉 mask 重试"也被同样 TypeError 挡住 →
+   解法：except 分支下钻到未包装的底层模型调用（LoRA 模块已注入其子层，不丢微调）
+10. **tokenizer 不产出 attention_mask**（HyenaDNA 单碱基分词器）→ 全 1 mask 兜底
+
+### 工程与可复现
+- 6 个 run 全部：固定种子（42/43/44）、超参在 configs/lora.json、结果可追溯到 results/lora.csv + logs/*.json
+- 微调权重持久化：data/models/finetuned/lora_{model}_seed{N}.pt（2.4MB/个，不入库，M4/M5 复用）
+- 训练曲线（均值±std）：results/figures/lora_curves.png；聚合表：results/lora_summary.md
