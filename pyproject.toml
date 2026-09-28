@@ -35,6 +35,7 @@ ml = [
     "scikit-learn>=1.7",
     "transformers>=4.51",
     "einops>=0.8.2",
+    "triton-windows>=3.8.0.post28 ; sys_platform == 'win32'",
 ]
 
 [build-system]

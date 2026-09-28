@@ -612,6 +612,7 @@ ml = [
     { name = "scikit-learn" },
     { name = "torch" },
     { name = "transformers" },
+    { name = "triton-windows", marker = "sys_platform == 'win32'" },
 ]
 
 [package.metadata]
@@ -638,6 +639,7 @@ ml = [
     { name = "scikit-learn", specifier = ">=1.7" },
     { name = "torch", specifier = ">=2.7.1", index = "https://mirror.sjtu.edu.cn/pytorch-wheels/cu128" },
     { name = "transformers", specifier = ">=4.51" },
+    { name = "triton-windows", marker = "sys_platform == 'win32'", specifier = ">=3.8.0.post28" },
 ]
 
 [[package]]
@@ -3079,6 +3081,21 @@ wheels = [
     { url = "https://pypi.tuna.tsinghua.edu.cn/packages/df/3d/9e7eee57b37c80cec63322c0231bb6da3cfe535a91d7a4d64896fcb89357/triton-3.6.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a17a5d5985f0ac494ed8a8e54568f092f7057ef60e1b0fa09d3fd1512064e803", size = 188273063, upload-time = "2026-01-20T16:01:07.278Z" },
     { url = "https://pypi.tuna.tsinghua.edu.cn/packages/48/db/56ee649cab5eaff4757541325aca81f52d02d4a7cd3506776cad2451e060/triton-3.6.0-cp314-cp314t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0b3a97e8ed304dfa9bd23bb41ca04cdf6b2e617d5e782a8653d616037a5d537d", size = 176274804, upload-time = "2026-01-20T16:16:31.528Z" },
     { url = "https://pypi.tuna.tsinghua.edu.cn/packages/f6/56/6113c23ff46c00aae423333eb58b3e60bdfe9179d542781955a5e1514cb3/triton-3.6.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:46bd1c1af4b6704e554cad2eeb3b0a6513a980d470ccfa63189737340c7746a7", size = 188397994, upload-time = "2026-01-20T16:01:14.236Z" },
+]
+
+[[package]]
+name = "triton-windows"
+version = "3.8.0.post28"
+source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
+wheels = [
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/84/f0/9bc3fbe3c0707ef6673a3eb67eccaf3075ed03acd7319c9a74b155cf2c07/triton_windows-3.8.0.post28-cp311-cp311-win_amd64.whl", hash = "sha256:1cc45bce84d49ea17646bcd5a19f3ba1db2567a94458c1ab3b2a9a2698b20b08", size = 52808524, upload-time = "2026-08-29T12:13:41.87Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/90/d1/08a707ccfd78d0a49ae70e982b984a9a56a920f68115066b01074c20f706/triton_windows-3.8.0.post28-cp311-cp311-win_arm64.whl", hash = "sha256:5b4a05d84d50b24dd429d3ae9562824c525aacc83bb31a078a1ae5cd8c8ff3b3", size = 48394887, upload-time = "2026-08-29T12:13:50.701Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/61/e9/2eab61f500e118d83249b09b10722957f71e551c2b6502135bcfcb32512a/triton_windows-3.8.0.post28-cp312-cp312-win_amd64.whl", hash = "sha256:06435b922ebabbfcb3fb0f4b4b2257a2676dd39cc263a562be356bd58c15c9b8", size = 52810394, upload-time = "2026-08-29T12:13:59.864Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/35/96/9424cb34eb4581de2e2ccdd01266635478f15ecf1586c73e3d4383dd38f3/triton_windows-3.8.0.post28-cp312-cp312-win_arm64.whl", hash = "sha256:3512109cdc21734e51ca3a0f33f273d2970d95a25922d3306e10a8f7813e8e4d", size = 48390004, upload-time = "2026-08-29T12:14:08.7Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/6e/78/41e6eb32d3671dd1e95c3286d5b8fe7c7dfb78c6e010096adfe7e938d139/triton_windows-3.8.0.post28-cp313-cp313-win_amd64.whl", hash = "sha256:2588f5f6f160d7823fc700bb77be395031f652d53bd579b0f8bf3c507c3c6ce5", size = 52810158, upload-time = "2026-08-29T12:14:17.715Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/8b/48/60a24cf95f0cc702e87bb75b8270da266783891d876f417fa8cb71599d0d/triton_windows-3.8.0.post28-cp313-cp313-win_arm64.whl", hash = "sha256:265e4dc330cb25109ff15a1bf972e38c5ff3a274dd1c75d598bfd45066cc1c33", size = 48389326, upload-time = "2026-08-29T12:14:26.249Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/ce/9b/51431c92ada3ce601ad303544702f8e0f6b556fff0c5578ace256a194718/triton_windows-3.8.0.post28-cp314-cp314-win_amd64.whl", hash = "sha256:087a7d3d98d481cb2eceb0fc9cbfb363ed96189abd188cd7c043efafd40549bc", size = 54097254, upload-time = "2026-08-29T12:14:35.839Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/7e/77/d9cf9e05c320fc781affe0656caa81ec2c79c706997ef734a4266f5e0f37/triton_windows-3.8.0.post28-cp314-cp314-win_arm64.whl", hash = "sha256:e766cc72355fbd391bd5869f8f4f2c416557a0af0853a25f616736037ac415f2", size = 49565672, upload-time = "2026-08-29T12:14:44.492Z" },
 ]
 
 [[package]]
