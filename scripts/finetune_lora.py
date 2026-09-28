@@ -41,12 +41,14 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def hidden_of(model, input_ids, attention_mask):
     """兼容自定义模型的三个坑（devlog M3 实录）：
     1. DNABERT-2 标准注意力回退路径返回 tuple(last_hidden_state, pooled) 而非 ModelOutput
-    2. HyenaDNA 的 forward 不接受 attention_mask 关键字
+    2. HyenaDNA 的底层 forward 不接受 attention_mask；而 peft 包装器会显式透传该参数，
+       因此 retry 也必须下钻到未包装的底层模型（LoRA 模块已注入其子层，不影响微调）
     """
     try:
         raw = model(input_ids=input_ids, attention_mask=attention_mask)
     except TypeError:
-        raw = model(input_ids=input_ids)
+        inner = getattr(getattr(model, "base_model", model), "model", None) or model
+        raw = inner(input_ids=input_ids)
     return raw[0] if isinstance(raw, tuple) else raw.last_hidden_state
 
 
@@ -183,7 +185,14 @@ def main() -> int:
             )
             torch.save(toks, cache)
             print(f"  {s}: ids {tuple(toks['input_ids'].shape)}（已缓存）")
-        enc[s] = (toks["input_ids"], toks["attention_mask"])
+        # HyenaDNA 的 tokenizer 不产出 attention_mask（模型本身不需要）→ 全 1 兜底
+        ids_t = toks["input_ids"]
+        mask_t = (
+            toks["attention_mask"]
+            if "attention_mask" in toks
+            else torch.ones_like(ids_t)
+        )
+        enc[s] = (ids_t, mask_t)
 
     ids = {s: enc[s][0].to(DEVICE) for s in enc}
     mask = {s: enc[s][1].to(DEVICE) for s in enc}

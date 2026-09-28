@@ -32,3 +32,5 @@ results/figures/*
 !data/manifests
 data/manifests/*
 !data/manifests/*.sha256
+!results/lora.csv
+!results/lora_summary.md
