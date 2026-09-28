@@ -331,3 +331,11 @@ results/baseline.csv。
 ### 决策记录（可讲）
 浏览器端用 CNN 而非 LoRA：体积（0.81MB vs 481MB）、WASM 可跑性（fp16/int8 都不可行）；
 但**最优模型的 ONNX 导出与一致性验证一样没省**，两者关系在 webapp/README 写清楚，不美化。
+
+### M5 线上验证（2026-09-29）
+- Pages 部署成功：**https://fzyz-whx.github.io/EnhancerScope/**（首次部署失败是因为当时 Pages 未启用，启用后重跑即通过）
+- 线上端到端实测（Chrome）：模型就绪 3.9s（含 28MB ORT WASM 首次下载）、**单序列推理 11ms**、
+  敏感度 523ms；预测值（Dev 2.644 / Hk 5.588）与本地完全一致 → 部署的模型正确
+- 线上截图入库 docs/assets/webapp_online.png
+- 坑 18：`gh pr create --body "..."` 的反引号被 shell 执行（误触发 npm install 并生成野 package-lock.json）——
+  教训：含反引号/`$()` 的长文本一律用 `--body-file`
