@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 数据与结果：体积大/可再生的内容不入库（goal 行为红线 3），保留目录占位
+data/*
+!data/.gitkeep
+results/*
+!results/.gitkeep
+
+# notebooks
+.ipynb_checkpoints/
+
+# IDE / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
