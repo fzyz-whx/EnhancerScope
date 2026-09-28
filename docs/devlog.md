@@ -40,3 +40,34 @@
 3. **Clash 节点不稳**：直连 GitHub 完全不通；经外部控制器（127.0.0.1:9097，密钥 set-your-secret）API 实测后把主组「一元机场」切到「自动选择」(URLTest 自动故障转移) → 流量稳定。
 
 **下一步**：M1 数据勘察——确认人类 MPRA / DeepSTARR / GUE 三个候选的真实可下载性，选定后下载→EDA→按染色体防泄漏划分→数据卡。
+
+## 2026-09-28 · M1 完成记录
+
+### 数据源决定（按 goal 优先级）
+1. **首选 ① 人类 MPRA（Kircher 2019 饱和 MPRA）：不可用**。Zenodo 经两个代理节点均不可达
+   （10/10 + 5/5 失败，EOF）；HF 上仅有 `gonzalobenegas/sat_mut_mpra`（只有 test.parquet，
+   无法训练）。kircherlab 的 GitHub 仓是 Shiny 前端，不含原始数据。
+2. **按 goal 规则 fallback 到 ② DeepSTARR**（果蝇，GenerTeam/DeepSTARR-enhancer-activity，
+   上游为官方 Zenodo 5502060）。HF 卡片自述"仅格式调整"。
+   —— **此 fallback 无需批准（goal 明示），特此在 devlog 顶部记录原因。**
+
+### 数据实测事实（全部可复现）
+- 总量 484,034 = train 402,278 / valid 40,570 / test 41,186；序列 249bp；双任务连续目标
+  `Dev_log2_enrichment` / `Hk_log2_enrichment`（±8 log2 长尾）。
+- **染色体级防泄漏**：train 11 臂，chr2R 整臂 held out；**valid/test 坐标零重叠**
+  （valid=chr2R 左半 4,329–10,573,449，test=右半 10,574,436–21,146,449，双向 0.0%，
+  numpy 前缀最大值精确计算）。
+- 清洗：过滤 18 条含 N 序列（全部来自 chrYHet/chr2RHet 异染色质臂，N 数成对出现）。
+- `scripts/verify_split.py` 把上述全部变成断言（防泄漏验证全绿），不再是口头声明。
+
+### 坑与解法
+1. **Zenodo 完全不可达**（代理节点问题）→ 记录原因后按规则 fallback，不硬刚。
+2. **label 列是 numpy 数组列**（每行 [Dev_scaled, Hk_scaled] 二元组，非类别标签）——
+   `value_counts()` 直接挂死。教训：先查 dtype 再统计。
+3. **后台 python 孤儿进程**（TaskStop 只杀 shell 不杀子进程）占 674MB 内存拖慢一切 →
+   `taskkill /PID x /F` 后恢复。教训：长任务用 `.venv/Scripts/python.exe` 直跑并设 timeout。
+4. **`uv run` 在断网时会卡在环境校验** → 网络不稳时用 venv python 直跑。
+
+### 下一步（M2）
+k-mer+GBDT / 轻量 CNN / 零样本 LM 三条 baseline，统一 Spearman/Pearson/RMSE，结果落
+results/baseline.csv。
