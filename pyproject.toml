@@ -33,7 +33,7 @@ ml = [
     "torch>=2.7.1",
     "lightgbm>=4.6",
     "scikit-learn>=1.7",
-    "transformers>=4.51",
+    "transformers>=4.51,<5",
     "einops>=0.8.2",
     "triton-windows>=3.8.0.post28 ; sys_platform == 'win32'",
 ]
