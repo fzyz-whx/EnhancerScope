@@ -1,0 +1,33 @@
+{
+  "seed": 42,
+  "targets": ["Dev_log2_enrichment", "Hk_log2_enrichment"],
+  "kmer_gbm": {
+    "k": 6,
+    "objective": "regression_l2",
+    "learning_rate": 0.05,
+    "num_leaves": 127,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 1,
+    "max_rounds": 2000,
+    "early_stopping": 100,
+    "note": "k=6 单层词袋（k<=6 全叠需 ~4.7GB CSR，内存受限；局限：无位置信息）"
+  },
+  "cnn": {
+    "seeds": [42, 43, 44],
+    "batch_size": 256,
+    "lr": 0.0005,
+    "max_epochs": 30,
+    "patience": 5,
+    "weight_decay": 0.00001,
+    "architecture": "DeepSTARR 风格: Conv(64,7)-P - Conv(120,5)-P - Conv(120,5)-P - Conv(60,5)-P - Dense(60) - Dense(2)",
+    "note": "全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行"
+  },
+  "zeroshot": {
+    "model": "zhihan1996/DNABERT-2-117M",
+    "train_probe_sample": 50000,
+    "probe_alphas": [0.1, 1.0, 10.0],
+    "embed_batch_size": 64,
+    "note": "零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）"
+  }
+}

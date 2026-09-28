@@ -1,0 +1,21 @@
+model,task,split,seed,spearman,pearson,rmse,notes
+kmer_gbm,Dev_log2_enrichment,valid,42,0.5780960737863517,0.593757107464234,1.2223344566068717,k=6词袋+GC; best_iter=970; k=6 单层词袋（k<=6 全叠需 ~4.7GB CSR，内存受限；局限：无位置信息）
+kmer_gbm,Dev_log2_enrichment,test,42,0.5814455681745195,0.5889063620978103,1.2380091796226695,k=6词袋+GC; best_iter=970; k=6 单层词袋（k<=6 全叠需 ~4.7GB CSR，内存受限；局限：无位置信息）
+kmer_gbm,Hk_log2_enrichment,valid,42,0.5371018823895733,0.6749937730707223,1.250555561760212,k=6词袋+GC; best_iter=1647; k=6 单层词袋（k<=6 全叠需 ~4.7GB CSR，内存受限；局限：无位置信息）
+kmer_gbm,Hk_log2_enrichment,test,42,0.5191741714076624,0.6896630199974055,1.237298681686689,k=6词袋+GC; best_iter=1647; k=6 单层词袋（k<=6 全叠需 ~4.7GB CSR，内存受限；局限：无位置信息）
+cnn,Dev_log2_enrichment,valid,42,0.6261924990337538,0.6588569534288007,1.1424249632259396,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Hk_log2_enrichment,valid,42,0.5796446148398856,0.7348191322075325,1.148044716248721,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Dev_log2_enrichment,test,42,0.6371920395607874,0.6629349859457373,1.1459181488401844,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Hk_log2_enrichment,test,42,0.5635320106748305,0.7416186212362917,1.1425893395389544,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Dev_log2_enrichment,valid,43,0.6242671250323628,0.6563961266357764,1.146657941451806,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Hk_log2_enrichment,valid,43,0.582952483883832,0.7302454005386521,1.1563577364497102,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Dev_log2_enrichment,test,43,0.6420469611729118,0.6672006231758965,1.1408428378183098,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Hk_log2_enrichment,test,43,0.5707874752202486,0.7432242167757351,1.139760786580467,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Dev_log2_enrichment,valid,44,0.6238479615197803,0.6558328629124558,1.1460509239613312,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Hk_log2_enrichment,valid,44,0.5823415543943313,0.7353668917159703,1.1467276890921572,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Dev_log2_enrichment,test,44,0.6365736174146464,0.6594194803578497,1.1511056847917365,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+cnn,Hk_log2_enrichment,test,44,0.5618552866874446,0.7437151161324431,1.1386929060018378,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+zeroshot_ridge,Dev_log2_enrichment,valid,42,0.4182080123782062,0.4159824382353675,1.381059161194622,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）
+zeroshot_ridge,Hk_log2_enrichment,valid,42,0.3572185937990819,0.4063753286006079,1.5454467577039863,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）
+zeroshot_ridge,Dev_log2_enrichment,test,42,0.4276022888611435,0.4217472175950508,1.3877925239983298,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）
+zeroshot_ridge,Hk_log2_enrichment,test,42,0.3632357490958964,0.4330502202060449,1.5355227551159183,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）

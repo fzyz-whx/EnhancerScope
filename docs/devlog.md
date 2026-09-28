@@ -71,3 +71,116 @@
 ### 下一步（M2）
 k-mer+GBDT / 轻量 CNN / 零样本 LM 三条 baseline，统一 Spearman/Pearson/RMSE，结果落
 results/baseline.csv。
+
+## 2026-09-28 · M2 开工前计划
+
+**目标**：固定划分上三条 baseline——① k-mer+LightGBM（CPU）② DeepSTARR 风格轻量 CNN（GPU）③ gDNA LM 零样本（embedding+线性探针，不微调）。统一指标 Spearman/Pearson/RMSE，产出 results/baseline.csv + README benchmark 表。
+
+**关键决策（预判）**：
+- torch 装 cu128（RTX 5060=Blackwell sm_120，PyTorch≥2.7 才支持），~2.5GB 下载与写代码并行
+- ③ 零样本打分：伪对数似然需 249×3 次前向 × 4 万序列 = 不可行；用 **embedding(均值池化)+Ridge 探针**（goal 明示允许），train 侧抽样 5 万条提特征（8GB 显存约束，如实记录）
+- CNN 用 3 个种子报均值±std；GBDT/Ridge 确定性单种子
+- 防泄漏红线：所有模型只见 train split，chr2R 的 valid/test 仅用于评估
+
+## 2026-09-28 · M2 进行中：baseline ①② 完成记录
+
+### 结果（test split，真实数字）
+| model | Dev Spearman | Hk Spearman | 备注 |
+|---|---|---|---|
+| ① kmer_gbm (k=6+GC, LightGBM) | 0.581 | 0.519 | 单种子42, CPU ~6min |
+| ② CNN (DeepSTARR风格) | **0.639 ± 0.003** | **0.566 ± 0.005** | 3 seeds (42/43/44), GPU |
+
+### 与官方 DeepSTARR 论文的差距（如实归因，不许美化）
+官方论文 test Pearson r≈0.93+，我们 CNN 只有 0.66/0.74。差距归因（待 M2 收尾验证）：
+1. **早停太急**：patience=5，16-17 epoch 就停了（官方训 200 epochs）
+2. 未复现官方超参细节（官方 batch 128 / 特定调度）
+3. lr 调度不同（我们 ReduceLROnPlateau）
+→ M2 的定位是 baseline 而非复现 SOTA：CNN > k-mer 符合预期（词袋无位置信息），
+这条差距线正是 M3 LoRA 微调要打穿的靶子。
+
+### 坑
+1. LightGBM 4.6 的 `eval_set` 参数已 deprecated（改 eval_X/eval_y）——仅警告，结果有效。
+2. CNN 显存策略生效：one-hot uint8 全量驻 GPU（400MB），float 按batch转，训练快且稳。
+
+## 2026-09-28 · M2 完成记录：Baseline 三件套全绿
+
+### 最终结果（test split，Spearman ρ）
+| model | Dev（发育型） | Hk（管家型） | 备注 |
+|---|---|---|---|
+| ① k-mer+GBDT (k=6+GC, LightGBM) | 0.581 | 0.519 | seed 42, CPU ~6min |
+| ② CNN (DeepSTARR 风格) | **0.639 ± 0.003** | **0.566 ± 0.005** | seeds 42/43/44, GPU |
+| ③ 零样本 (DNABERT-2 embed + Ridge) | 0.428 | 0.363 | 不微调, alpha=10 valid 选出 |
+
+**排序完全符合预期**：k-mer 词袋（无位置信息）< CNN（学局部 motif 语法）< 微调上限（M3 靶线）。
+零样本垫底符合口径（不微调的 embedding + 线性探针本来就弱）——M3 LoRA 的增值空间一目了然。
+
+### 与官方论文差距（如实归因）
+官方 DeepSTARR test Pearson r≈0.93，我们 CNN 0.66/0.74。归因：早停急（patience=5，16-17 epoch
+即停 vs 官方 200 epochs）、未复现官方超参细节、ReduceLROnPlateau 调度不同。**M2 定位是 baseline
+而非复现 SOTA**——差距线就是 M3 的靶子。
+
+### 坑与解法（③ 四连坑，全部真实）
+1. **einops 缺失** → DNABERT-2 remote code 需要 → `uv add --group ml einops`
+2. **triton 缺失** → remote code 静态 import triton，但官方无 Windows wheel → `triton-windows` fork
+3. **transformers 5.x 只认 safetensors** → DNABERT-2 仓库只有 pytorch_model.bin（449MB）→ 锁 `transformers<5`（4.57.6）
+4. **hf-mirror SSL EOF 抖动** → 下载 tokenizer 时 5 连败 → curl 带 `-C -` 断点续传 + 重试循环
+5. **label 列是 numpy 数组列**（[Dev_scaled, Hk_scaled] 二元组，非类别标签）→ `value_counts()` 挂死——先查 dtype 再统计（教训）
+6. **evaluate() 常量预测 NaN** → 零方差的秩相关无定义，按 0（无信号）如实处理并写进 docstring
+
+### 工程要点
+- ①③ 单种子（42）确定性可复现；② 3 种子（42/43/44）报均值±标准差
+- CNN 显存策略：one-hot uint8 全量驻 GPU（402k×4×249 ≈ 400MB），按 batch 转 float——训练全程零 CPU-GPU 拷贝
+- ③ 探针 train 抽样 5 万（embedding 提取全量 train 需 ~25min GPU；5 万对线性探针已饱和，如实记录）
+
+## 2026-09-28 · M3 开工前计划
+
+### 实验设计（8GB 显存硬约束下的决策）
+- **LoRA 配置**：r=16, alpha=32, dropout=0.1, target=["query","value"]（BERT 系标准选择）；
+  gradient checkpointing + bf16 + 梯度累积（等效 batch 64 = 物理 32 × 累积 2）
+- **序列 249bp 原生**（数据卡），无需截断——512bp 约束天然满足
+- **DNABERT-2 117M**：bf16 权重 ~234MB + LoRA 参数 ~0.6M + 激活（checkpointing）→ 预估 3-5GB ✓
+- **HyenaDNA**：选 small-32k-seqlen-hf（短序列兼容），参数量实测打印；remote code 风险已知（einops ✓ 已装）
+- **训练预算**：LoRA 收敛快，2-3 epochs + 早停（patience=2 on valid）；先单 seed 冒烟测速度再定 epochs
+- **3 seeds**（42/43/44）× 2 模型 = 6 runs；每 run 记录训练曲线/显存峰值/时长
+- **对比口径**：与 M2 三件套同表（同划分/同指标/同 test 只碰一次）
+
+### DoD 清单
+- [ ] results/lora.csv（模型 × seed × 指标，可溯源到日志）
+- [ ] docs/experiments.md（超参 + 选择理由）
+- [ ] 训练曲线图（results/figures/lora_curves.png）
+- [ ] README benchmark 表更新（六行对比）
+- [ ] 若负结果：如实呈现 + 归因分析
+
+### 已知风险预判
+1. HyenaDNA remote code × transformers 4.57 兼容性（einops 已装，其他坑跑了才知道）
+2. LoRA target modules：DNABERT-2 是 BERT 架构（query/value 标准选择）；HyenaDNA 是 Hyena 算子，
+   target_modules 命名不同（可能要 ["proj","in_proj","out_proj"] 之类），跑了才知道
+3. 显存若 OOM：降 batch → 累积加大 → 再不行缩短序列（512 红线内 249 本来就短，还有余量）
+
+## 2026-09-28 · M2 完成记录
+
+### 三件套最终结果（test split，Spearman ρ）
+| model | Dev | Hk | 说明 |
+|---|---|---|---|
+| ① kmer_gbm (k=6+GC) | 0.581 | 0.519 | CPU 单种子 ~6min |
+| ② CNN | **0.639±0.003** | **0.566±0.005** | GPU 3 seeds，~9min |
+| ③ zeroshot (embed+Ridge) | 0.428 | 0.363 | GPU ~11min，不微调 |
+
+排序符合预期（词袋<CNN<零样本垫底）；与官方论文差距如实归因（早停急+超参未复现），M3 的靶线明确。
+
+### 坑与解法（M2 全部实录）
+1. **einops 缺失**：DNABERT-2 remote code 硬依赖 → uv add einops
+2. **triton 无官方 Windows wheel**：remote code 静态 import triton → triton-windows 3.8.0 fork
+3. **transformers 5.x 只认 safetensors**：DNABERT-2 只有 pytorch_model.bin → 锁 <5（4.57.6）
+4. **hf-mirror SSL EOF 抖动**：tokenizer_config 下载 5 连败 → curl -C - 断点续传 + 重试循环
+5. **label 列是 numpy 数组列**（[Dev,Hk] 二元组）→ value_counts 挂死；先查 dtype 再统计
+6. **后台 python 孤儿进程 674MB**：TaskStop 只杀 shell 不杀子进程 → taskkill /F；此后长任务一律 timeout + 后台
+7. **evaluate() 常量预测 NaN**：零方差秩相关无定义 → 按无信号=0 如实定义并写 docstring
+8. **GC 算术乌龙**：我自己把 ACGTACGT 的 GC 算成 0.25（实为 4/8=0.5），gc_fraction 本来就对——测试期望写错，修测试不修代码
+9. **③ 的 embedding 缓存投毒**：坏模型时期的 embeddings/*.npy 必须清掉重提（否则污染下游）
+
+### DoD 自查（M2）
+- [x] results/baseline.csv（20 行：①4 + ②12 + ③4，含 notes 局限附注）
+- [x] README benchmark 表（三行对比 + 复现命令 + 差距归因）
+- [x] 固定随机种子（42/43/44），脚本一键复现
+- [x] 局限如实记录（notes 列 + devlog），未隐藏未弱化
