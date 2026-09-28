@@ -37,6 +37,7 @@ ml = [
     "einops>=0.8.2",
     "triton-windows>=3.8.0.post28 ; sys_platform == 'win32'",
     "protobuf>=7.36.2",
+    "peft>=0.21.0",
 ]
 
 [build-system]

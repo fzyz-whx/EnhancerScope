@@ -13,8 +13,14 @@
 | 模型 | Dev（发育型） | Hk（管家型） | 说明 |
 |---|---|---|---|
 | ① k-mer(k=6)+GC → LightGBM | 0.581 | 0.519 | 单种子 42；词袋无位置信息 |
-| ② DeepSTARR 风格 CNN | **0.639 ± 0.003** | **0.566 ± 0.005** | 3 种子（42/43/44），GPU |
+| ② DeepSTARR 风格 CNN | **0.639 ± 0.003** | 0.566 ± 0.005 | 从零训练，3 种子 |
 | ③ DNABERT-2 零样本（embed+Ridge，不微调） | 0.428 | 0.363 | 探针 train 抽样 5 万 |
+| ④ **LoRA 微调 DNABERT-2** | 0.6214 ± 0.0088 | **0.5722 ± 0.0044** | 仅微调 0.50% 参数，47min/run，显存峰值 2.67GB |
+| ⑤ LoRA 微调 HyenaDNA | 0.2845 ± 0.0021 | 0.2486 ± 0.0008 | **负结果**，归因见 docs/experiments.md §4.1 |
+
+**核心结论**：LoRA 微调把 DNABERT-2 的零样本（0.428/0.363）大幅提升到 0.6214/0.5722（Dev +0.19 / Hk +0.21），
+并在 Hk 上超过从零训练的全量 CNN——只微调 0.5% 参数的预训练模型与全量从零训练的 CNN 互有胜负，
+这是基因组语言模型预训练价值的直接证据。HyenaDNA（3.3M）的失败归因如实记录在 experiments.md。
 
 复现：`uv run --group ml python scripts/baseline_kmer_gbm.py && uv run --group ml python scripts/baseline_cnn.py && uv run --group ml python scripts/baseline_zeroshot.py`（固定种子，结果追加 `results/baseline.csv`）。各模型局限见 CSV `notes` 列与 docs/devlog.md。
 

@@ -184,3 +184,60 @@ results/baseline.csv。
 - [x] README benchmark 表（三行对比 + 复现命令 + 差距归因）
 - [x] 固定随机种子（42/43/44），脚本一键复现
 - [x] 局限如实记录（notes 列 + devlog），未隐藏未弱化
+
+## 2026-09-28 · M3 进行中：模型加载五连坑与兼容修复
+
+### 坑与解法（全部实测，非推测）
+1. **target_modules 命名不符**：配置写了 BERT 系标准的 query/value，实测打印顶层名发现 DNABERT-2 的
+   attention 是**融合 Wqkv 投影**（无独立 query/value）→ 改 `["Wqkv"]`。HyenaDNA 实测为 `in_proj/out_proj` ✓
+2. **返回类型是 tuple 不是 ModelOutput**：DNABERT-2 标准注意力回退路径返回
+   `(last_hidden_state, pooled)` → `.last_hidden_state` 报 AttributeError → 加 `hidden_of()` 兼容层
+3. **dtype 硬编码缺陷**：bf16 加载时标准注意力回退路径 `Float vs BFloat16` 混算崩 →
+   **fp32 加载权重 + 训练 autocast(bf16)** 承担混合精度（goal 的 bf16 约束由 autocast 满足，如实记录）
+4. **gradient checkpointing 不兼容**：DNABERT-2 自定义 BertModel 不支持 → 脚本 try/except 降级并打印；
+   实测显存峰值仅 **2.20GB**（8GB 卡余量充足，无需 checkpointing 也能跑）
+5. **tokenize 慢（9 分钟/次）**：484k 条 BPE 编码 → 加 tokenize 缓存（data/processed/tokenized/*.pt，
+   按 model+split 命名），3 seeds 省 ~18 分钟
+
+### HyenaDNA 实测（CPU 探测，未占 GPU）
+- 3.3M 参数（small-32k），hidden=d_model（不是 hidden_size）
+- forward **不接受 attention_mask** → hidden_of 加了 TypeError 回退
+- tokenizer 是单碱基级（HyenaDNATokenizer），249bp → 249 tokens
+
+### 冒烟结果（DNABERT-2 / seed 42 / 1 epoch，真实数字）
+- test: Dev ρ=0.579, Hk ρ=0.548；显存峰值 2.20GB；时长 15.9min/epoch
+- 对比 M2：已超零样本(+0.15/+0.19)、超 k-mer 的 Hk；逼近 CNN —— 1 epoch 即打平/超越 3/4 条 baseline
+
+### 坑续（第 6-8 坑，均为实测）
+6. **timeout 太短杀在评估边界**：每 seed `timeout 3000`（50min），而 3 epochs 训练需 47.3min，
+   最终评估+写 CSV 被砍 → 改为每 run `timeout 4600`（76min，留足余量）
+7. **torch>=2.6 的 `weights_only=True` 默认值拒绝自定义对象**：tokenize 缓存用 `torch.save(BatchEncoding)`，
+   `torch.load` 直接 `UnpicklingError`（seed 43/44 因此 0 epoch 崩溃）→ `torch.load(..., weights_only=False)`（本地可信缓存）
+8. **微调权重未持久化**（自查发现）：best_state 只在内存 → 补 `data/models/finetuned/lora_{model}_seed{N}.pt`
+   （LoRA adapter + pooler，~2.4MB，不入库），M4 可解释性与 M5 ONNX 导出依赖它
+
+## 2026-09-29 · M3 完成记录
+
+### 结果（test，3 seeds 均值±std）
+| 模型 | Dev ρ | Hk ρ | 时长/run | 显存峰值 |
+|---|---|---|---|---|
+| **LoRA DNABERT-2**（117M，微调 0.50%） | **0.6214 ± 0.0088** | **0.5722 ± 0.0044** | 47.1min | 2.67GB |
+| LoRA HyenaDNA（3.3M） | 0.2845 ± 0.0021 | 0.2486 ± 0.0008 | 8.9min | 2.66GB |
+
+### 核心结论
+1. 微调把 DNABERT-2 从零样本 0.428/0.363 提升到 0.6214/0.5722（+0.19/+0.21）——微调价值被量化
+2. LoRA 只调 0.5% 参数即拿下 Hk 最优（> CNN 全量从零训练），Dev 与 CNN 差 0.018 —— 预训练价值直接证据
+3. **HyenaDNA 是负结果**（低于 k-mer 与零样本）：loss 几乎没学动（2.46→2.42）。归因假设：
+   容量（3.3M vs 117M）/ 单碱基 tokenizer（249 tokens vs BPE 63）/ 超参为 DNABERT-2 调的 /
+   target 模块未消融。未做后续调优，如实记录（docs/experiments.md §4.1）
+
+### 新增坑（第 9-10 坑）
+9. **peft 包装器会透传 attention_mask**：HyenaDNA 底层 forward 不接受该参数，而 peft 的包装 forward
+   签名里带它并显式透传 → 连"去掉 mask 重试"也被同样 TypeError 挡住 →
+   解法：except 分支下钻到未包装的底层模型调用（LoRA 模块已注入其子层，不丢微调）
+10. **tokenizer 不产出 attention_mask**（HyenaDNA 单碱基分词器）→ 全 1 mask 兜底
+
+### 工程与可复现
+- 6 个 run 全部：固定种子（42/43/44）、超参在 configs/lora.json、结果可追溯到 results/lora.csv + logs/*.json
+- 微调权重持久化：data/models/finetuned/lora_{model}_seed{N}.pt（2.4MB/个，不入库，M4/M5 复用）
+- 训练曲线（均值±std）：results/figures/lora_curves.png；聚合表：results/lora_summary.md
