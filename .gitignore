@@ -26,3 +26,8 @@ Thumbs.db
 !results/figures
 results/figures/*
 !results/figures/*.png
+
+# split 校验清单（固定划分的可复现证明）
+!data/manifests
+data/manifests/*
+!data/manifests/*.sha256
