@@ -1,0 +1,41 @@
+[project]
+name = "enhancerscope"
+version = "0.1.0"
+description = "Enhancer activity prediction with genomic language models: LoRA fine-tuning, interpretability, browser demo and MCP tools"
+readme = "README.md"
+authors = [{ name = "fzyz-whx" }]
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+enhancerscope-demo = "enhancerscope.demo:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff==0.8.4",
+    "black==24.10.0",
+    "pre-commit>=4.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/enhancerscope"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
