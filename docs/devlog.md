@@ -241,3 +241,47 @@ results/baseline.csv。
 - 6 个 run 全部：固定种子（42/43/44）、超参在 configs/lora.json、结果可追溯到 results/lora.csv + logs/*.json
 - 微调权重持久化：data/models/finetuned/lora_{model}_seed{N}.pt（2.4MB/个，不入库，M4/M5 复用）
 - 训练曲线（均值±std）：results/figures/lora_curves.png；聚合表：results/lora_summary.md
+
+## 2026-09-29 · M4 开工前计划（可解释性分析）
+
+**目标**：对最优模型（LoRA DNABERT-2，按 valid MSE 选种子）做归因分析，产出 docs/interpretability.md
+（≥3 个完整案例：序列 → 归因图 → motif 命中 → 文献佐证）。
+
+**方法设计**
+- **in-silico 突变扫描**（主方法，goal 明示）：逐位置替换为其余 3 种碱基，测 Δ预测（Dev/Hk），
+  得到 per-base 重要度曲线——无需梯度、确定性、直接对应生物学语义（"这个位点变了活性会怎样"）
+- **saliency（梯度归因）**：对 embedding 求 ∂output/∂embedding，再按 token→碱基映射回 249bp 位置
+  （DNABERT-2 是 BPE 6-mer，需处理 token 边界：token 内碱基均分梯度）
+- **motif 对照**：JASPAR CORE insects（果蝇）PWM + 自实现 log-odds 扫描器（小工具，也是可讲点）；
+  高归因位点与 motif 命中位置的重叠率作为量化指标
+- **≥3 个案例**：优先选 test 集高活性序列 + 归因清晰的例子；归因与生物学不符时如实分析
+
+**风险预判**
+1. JASPAR 下载可能被墙 → 备选：geco/本地化 PWM 集（如实标注来源）
+2. BPE 边界导致 per-base 归因不精确 → 用突变扫描作为主证据，梯度归因作辅证（两条路互相印证）
+
+## 2026-09-29 · M4 完成记录（可解释性分析）
+
+### 方法与结果
+- **归因**：单碱基饱和突变（主，747 次前向/序列）+ 6bp 窗口遮蔽（辅）；两法一致性 Spearman
+  ρ：case1 0.405 / case2 **0.735** / case3 0.592（case2/3 互相印证）
+- **motif 对照**：JASPAR2020 insects（146 PWM）+ 自实现 log-odds 扫描器；指标 enrichment = 高归因碱基
+  落在 motif 区的比例 / motif 覆盖率
+
+| 案例 | 预测 Dev/真值 | 预测 Hk/真值 | Dev enrich | Hk enrich | 结论 |
+|---|---|---|---|---|---|
+| 2 | 3.44/4.18 | 6.26/6.59 | **2.49** | **2.77** | 正例：top 归因 126-128 落在 pnr(GATA) 命中区 123-134（score 最高）|
+| 3 | 3.17/3.01 | 0.79/2.10 | **2.85** | 0.71 | 部分正例：Dev 对齐同源域簇；Hk 归因不与 motif 重合且低估 |
+| 1 | 4.28/2.03 | 0.84/-0.78 | 0.50 | 0.25 | **失败案例**：最高预测样本高估 + 归因避开 motif |
+
+### 新增坑（第 11-13 坑）
+11. **jaspar.genereg.net 不可达**（6/6 失败）→ 改从 `vanheeringen-lab/gimmemotifs` 仓库经 gh api 获取
+    JASPAR2020 insects PWM 副本（文件头保留原始出处），并写 `scripts/download_jaspar.py` 固化路径
+12. **梯度归因不可用**：DNABERT-2 自定义 BertModel 的 `inputs_embeds` 路径报
+    `TypeError: ones_like(): argument 'input' must be Tensor, not NoneType`（硬依赖 input_ids）
+    → 改用两种扰动归因（单碱基 + 窗口遮蔽）并做一致性交叉验证，如实记录
+13. **`&&` 链被 lint 截断导致"以为跑了其实没跑"**：ruff I001 失败使后续命令（含重跑）未执行，
+    读到的是旧日志——教训：关键实验重跑不要挂在长 `&&` 链尾
+
+### 下一步（M5）
+最优模型 ONNX 导出 + Vite/TS 前端（粘贴序列 → 预测 + 按突变敏感度高亮碱基）+ GitHub Pages。
