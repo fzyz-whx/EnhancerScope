@@ -339,3 +339,17 @@ results/baseline.csv。
 - 线上截图入库 docs/assets/webapp_online.png
 - 坑 18：`gh pr create --body "..."` 的反引号被 shell 执行（误触发 npm install 并生成野 package-lock.json）——
   教训：含反引号/`$()` 的长文本一律用 `--body-file`
+
+## 2026-09-29 · M6 开工前计划（MCP 工具层）
+
+**目标**：FastMCP server 暴露 3 个工具，任意 LLM agent 可调用；一条命令启动；工具测试在 CI 跑；
+端到端演示（"分析这 5 条增强子序列" → 自动调用 → 汇总报告）。
+
+**设计**
+- 模型：复用 M5 的 `webapp/public/cnn.onnx`（0.81MB，已入库）→ 克隆即用，无需下载权重
+- 工具：`predict_activity(sequence)` / `explain_sequence(sequence, top_k)`（逐碱基突变敏感度）/
+  `batch_scan(fasta 文本或路径, top_k)`（批量 + 汇总）
+- **入参校验**：只接受 ACGT（大小写不敏感）；长度 <249 补 N、>249 截断（返回里明确标注处理方式）
+- 依赖策略：`fastmcp` + `onnxruntime` 提升为**主依赖**（不是 ml 组）——这样 CI 能真正跑工具测试
+- 启动：`uv run enhancerscope-mcp`（entry point），stdio 传输
+- 演示：`scripts/mcp_demo.py` 模拟 agent 调用流程并产出汇总报告（文本入库，作为"演示脚本"交付）
