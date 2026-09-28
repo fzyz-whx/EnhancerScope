@@ -15,3 +15,7 @@ cnn,Dev_log2_enrichment,valid,44,0.6238479615197803,0.6558328629124558,1.1460509
 cnn,Hk_log2_enrichment,valid,44,0.5823415543943313,0.7353668917159703,1.1467276890921572,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
 cnn,Dev_log2_enrichment,test,44,0.6365736174146464,0.6594194803578497,1.1511056847917363,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
 cnn,Hk_log2_enrichment,test,44,0.5618552866874446,0.7437151161324431,1.1386929060018378,DeepSTARR风格4conv+2dense; 全量 one-hot uint8 驻留 GPU(400MB)，浮点转换按 batch 进行
+zeroshot_ridge,Dev_log2_enrichment,valid,42,0.4182080123782062,0.41598243823536757,1.3810591611946221,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）
+zeroshot_ridge,Hk_log2_enrichment,valid,42,0.35721859379908194,0.40637532860060793,1.5454467577039863,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）
+zeroshot_ridge,Dev_log2_enrichment,test,42,0.4276022888611435,0.42174721759505085,1.3877925239983298,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）
+zeroshot_ridge,Hk_log2_enrichment,test,42,0.3632357490958964,0.4330502202060449,1.5355227551159183,DNABERT-2均值池化+Ridge(alpha=1.0); 不微调; train探针抽样50000; 零样本=不微调；embedding 均值池化 + Ridge 探针（train 抽样 5 万提特征，理由见 devlog）

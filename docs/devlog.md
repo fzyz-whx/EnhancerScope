@@ -156,3 +156,31 @@ results/baseline.csv。
 2. LoRA target modules：DNABERT-2 是 BERT 架构（query/value 标准选择）；HyenaDNA 是 Hyena 算子，
    target_modules 命名不同（可能要 ["proj","in_proj","out_proj"] 之类），跑了才知道
 3. 显存若 OOM：降 batch → 累积加大 → 再不行缩短序列（512 红线内 249 本来就短，还有余量）
+
+## 2026-09-28 · M2 完成记录
+
+### 三件套最终结果（test split，Spearman ρ）
+| model | Dev | Hk | 说明 |
+|---|---|---|---|
+| ① kmer_gbm (k=6+GC) | 0.581 | 0.519 | CPU 单种子 ~6min |
+| ② CNN | **0.639±0.003** | **0.566±0.005** | GPU 3 seeds，~9min |
+| ③ zeroshot (embed+Ridge) | 0.428 | 0.363 | GPU ~11min，不微调 |
+
+排序符合预期（词袋<CNN<零样本垫底）；与官方论文差距如实归因（早停急+超参未复现），M3 的靶线明确。
+
+### 坑与解法（M2 全部实录）
+1. **einops 缺失**：DNABERT-2 remote code 硬依赖 → uv add einops
+2. **triton 无官方 Windows wheel**：remote code 静态 import triton → triton-windows 3.8.0 fork
+3. **transformers 5.x 只认 safetensors**：DNABERT-2 只有 pytorch_model.bin → 锁 <5（4.57.6）
+4. **hf-mirror SSL EOF 抖动**：tokenizer_config 下载 5 连败 → curl -C - 断点续传 + 重试循环
+5. **label 列是 numpy 数组列**（[Dev,Hk] 二元组）→ value_counts 挂死；先查 dtype 再统计
+6. **后台 python 孤儿进程 674MB**：TaskStop 只杀 shell 不杀子进程 → taskkill /F；此后长任务一律 timeout + 后台
+7. **evaluate() 常量预测 NaN**：零方差秩相关无定义 → 按无信号=0 如实定义并写 docstring
+8. **GC 算术乌龙**：我自己把 ACGTACGT 的 GC 算成 0.25（实为 4/8=0.5），gc_fraction 本来就对——测试期望写错，修测试不修代码
+9. **③ 的 embedding 缓存投毒**：坏模型时期的 embeddings/*.npy 必须清掉重提（否则污染下游）
+
+### DoD 自查（M2）
+- [x] results/baseline.csv（20 行：①4 + ②12 + ③4，含 notes 局限附注）
+- [x] README benchmark 表（三行对比 + 复现命令 + 差距归因）
+- [x] 固定随机种子（42/43/44），脚本一键复现
+- [x] 局限如实记录（notes 列 + devlog），未隐藏未弱化
