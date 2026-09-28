@@ -47,7 +47,11 @@ def embed(model, tokenizer, sequences: list[str], batch_size: int) -> np.ndarray
         batch = tokenizer(
             sequences[i : i + batch_size], return_tensors="pt", padding=True
         ).to(DEVICE)
-        hidden = model(**batch).last_hidden_state  # (B, T, H)
+        raw = model(**batch)
+        # DNABERT-2 标准注意力回退返回 tuple (last_hidden_state, pooled)，需兼容
+        hidden = (
+            raw[0] if isinstance(raw, tuple) else raw.last_hidden_state
+        )  # (B, T, H)
         mask = batch["attention_mask"].unsqueeze(-1)  # (B, T, 1)
         pooled = (hidden * mask).sum(1) / mask.sum(1).clamp(min=1)
         out.append(pooled.cpu().numpy().astype(np.float32))
@@ -86,12 +90,18 @@ def main() -> int:
     from transformers import AutoModel, AutoTokenizer
 
     cfg = CONFIG["zeroshot"]
-    model_name = cfg["model"]
+    local_dir = Path("data/models/dnabert2")
+    if (local_dir / "pytorch_model.bin").exists():
+        model_name = str(local_dir)
+        print(f"[zeroshot] 使用本地模型: {model_name}（离线加载，零运行时网络依赖）")
+    else:
+        model_name = cfg["model"]
+        print(f"[zeroshot] 本地模型不存在，回退在线加载: {model_name}")
     print(f"[zeroshot] 加载 {model_name} (device={DEVICE})")
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
-        model_name, trust_remote_code=True, torch_dtype=torch.float16
-    ).to(DEVICE)
+    model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(
+        DEVICE
+    )  # fp32：117M 仅 ~470MB 显存；且标准注意力回退路径混 dtype 会炸（Half vs Float）
 
     splits = {s: load_split(s) for s in ("train", "valid", "test")}
     cache_dir = Path("data/processed/embeddings")
