@@ -53,11 +53,11 @@ def plot(curves: dict[str, list[dict]]) -> Path | None:
             x = np.arange(max_ep)
             ax.plot(x, mean, ls, marker="o", label=phase.replace("_loss", ""))
             ax.fill_between(x, mean - std, mean + std, alpha=0.2)
-        ax.set_title(f"{model}（{len(runs)} seeds）")
+        ax.set_title(f"{model} ({len(runs)} seeds)")
         ax.set_xlabel("epoch")
         ax.set_ylabel("MSE loss")
         ax.legend()
-    fig.suptitle("M3 LoRA 训练曲线（均值 ± 标准差）")
+    fig.suptitle("M3 LoRA training curves (mean +/- std)")
     fig.tight_layout()
     out = FIG / "lora_curves.png"
     fig.savefig(out, dpi=130, bbox_inches="tight")
