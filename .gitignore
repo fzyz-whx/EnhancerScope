@@ -38,3 +38,11 @@ data/manifests/*
 results/interpretability/*
 !results/interpretability/*.json
 !results/interpretability/*.csv
+
+# M5：LoRA 的 ONNX（481MB，Release 资产）与浏览器模型分离
+artifacts/
+
+# M5：webapp 构建产物与依赖
+webapp/node_modules/
+webapp/dist/
+!results/onnx_parity.json

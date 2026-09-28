@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EnhancerScope · 增强子活性预测</title>
+    <style>
+      :root { --bg:#0f1420; --card:#171d2c; --fg:#e8ecf5; --muted:#93a0b8; --dev:#4878CF; --hk:#EE854A; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--bg); color:var(--fg);
+             font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      .sub { color: var(--muted); margin-bottom: 20px; }
+      .card { background: var(--card); border:1px solid #253049; border-radius:12px; padding:18px; margin-bottom:16px; }
+      textarea { width:100%; height:120px; background:#0c111b; color:var(--fg); border:1px solid #2b3650;
+                 border-radius:8px; padding:10px; font-family:ui-monospace,Consolas,monospace; font-size:13px; resize:vertical; }
+      button { background:#2f6fed; color:#fff; border:0; border-radius:8px; padding:9px 18px; font-size:14px; cursor:pointer; }
+      button:disabled { opacity:.5; cursor:wait; }
+      .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+      .muted { color:var(--muted); font-size:13px; }
+      .activity { display:flex; gap:24px; margin-top:6px; flex-wrap:wrap; }
+      .activity .item { min-width: 200px; }
+      .bar { height:10px; background:#26304a; border-radius:5px; overflow:hidden; margin-top:6px; }
+      .bar > i { display:block; height:100%; width:0; }
+      .val { font-variant-numeric: tabular-nums; font-weight:600; }
+      #seqwrap { font-family:ui-monospace,Consolas,monospace; font-size:12px; line-height:1.1; word-break:break-all;
+                 letter-spacing:0.5px; background:#0c111b; border:1px solid #2b3650; border-radius:8px; padding:10px; }
+      #highlight { margin-top:8px; display:flex; height:46px; align-items:flex-end; gap:0; }
+      #highlight > span { flex:1 1 0; background:var(--dev); border-radius:1px 1px 0 0; }
+      .legend { display:flex; gap:16px; align-items:center; margin-top:8px; font-size:12px; color:var(--muted); }
+      .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
+      .err { color:#ff8f8f; white-space:pre-wrap; }
+      code { background:#0c111b; padding:1px 5px; border-radius:4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>EnhancerScope 🔬</h1>
+      <div class="sub">
+        增强子活性预测 · 浏览器端推理（ONNX Runtime Web / WASM）。
+        模型：DeepSTARR 风格 CNN（本仓库 M2 基准中 Dev 侧最优）。方法学见
+        <a href="https://github.com/fzyz-whx/EnhancerScope" style="color:#7aa2f7">项目仓库</a>。
+      </div>
+
+      <div class="card">
+        <div class="muted">粘贴 DNA 序列（仅 A/C/G/T，建议 249bp；不足自动补 N、超出截断）</div>
+        <textarea id="seq" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="predict" disabled>预测活性</button>
+          <button id="demo">载入示例序列</button>
+          <span class="muted" id="status">模型加载中…</span>
+        </div>
+        <div class="err" id="err"></div>
+      </div>
+
+      <div class="card">
+        <div class="activity">
+          <div class="item">
+            <div>发育型增强子活性（Dev log2）</div>
+            <div class="val" id="devVal">–</div>
+            <div class="bar"><i id="devBar" style="background:var(--dev)"></i></div>
+          </div>
+          <div class="item">
+            <div>管家型增强子活性（Hk log2）</div>
+            <div class="val" id="hkVal">–</div>
+            <div class="bar"><i id="hkBar" style="background:var(--hk)"></i></div>
+          </div>
+        </div>
+        <div class="muted" id="latency"></div>
+      </div>
+
+      <div class="card">
+        <div class="muted">
+          碱基敏感度（单碱基饱和突变的 |Δ预测|，与
+          <a href="https://github.com/fzyz-whx/EnhancerScope/blob/main/docs/interpretability.md" style="color:#7aa2f7">M4 归因方法</a>
+          同源：逐位替换为其余 3 种碱基，取最大绝对变化）
+        </div>
+        <div id="seqwrap"></div>
+        <div id="highlight"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--dev)"></i>Dev 敏感度</span>
+          <span><i class="swatch" style="background:var(--hk)"></i>Hk 敏感度</span>
+          <span id="hlLatency"></span>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

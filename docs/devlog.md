@@ -285,3 +285,49 @@ results/baseline.csv。
 
 ### 下一步（M5）
 最优模型 ONNX 导出 + Vite/TS 前端（粘贴序列 → 预测 + 按突变敏感度高亮碱基）+ GitHub Pages。
+
+## 2026-09-29 · M5 开工前计划（浏览器交互层）
+
+**目标**：把最优模型（LoRA DNABERT-2）导出 ONNX → Vite+TS 前端（粘贴 DNA 序列 → 预测 + 高亮碱基）
+→ GitHub Pages 部署；README 嵌 demo GIF；实测单序列延迟 <3s 记录在案。
+
+**关键风险与预案**
+1. **ONNX 导出可行性**（最大风险）：DNABERT-2 是 remote-code 自定义模型（ALiBi + 自定义
+   attention 回退 + tuple 返回）。预案：
+   a) 包一层 `OnnxWrapper`（只输出 (1,2) 张量，隐藏 tuple/中间量），eval + fp32 + 固定输入名
+   b) 导出后用 onnxruntime 与 PyTorch 做**数值一致性校验**（>0.999 相关或 max|Δ|<1e-3），
+      不一致就不发布——数字必须可信
+   c) 若自定义算子导致导出失败：如实记录 + 改导出 CNN baseline（纯 torch，必然可导），
+      文档写明"上线的不是最优模型"这一事实（不美化）
+2. **浏览器侧分词**：BPE tokenizer（tokenizer.json 167KB）在 JS 侧需要 transformers.js；
+   若集成不顺，退路是"服务端无关"的纯前端简化分词（不推荐）→ 优先解决 transformers.js
+3. **高亮逻辑**：必须与 M4 归因一致——用"单碱基替换敏感度"的前端近似（对每个位置做 3 次替换
+   前向代价过高）；改用**梯度/扰动的轻量近似**或预计算参数字典。方案：前端用
+   "逐位置置 N（遮蔽）"的 4 次前向批处理（249 次前向 batch=249 在 WASM 上约数百 ms）——
+   与 M4 的窗口遮蔽/突变法同源，文档中明确说明是近似并给出对比
+
+## 2026-09-29 · M5 完成记录（浏览器交互层）
+
+### 交付
+- **ONNX 导出（最优模型）**：LoRA DNABERT-2 → fp32 单文件 481MB，与 PyTorch 数值一致
+  （max|Δ|=7e-6，Pearson 1.0，`results/onnx_parity.json`）——作为 Release 资产分发
+- **浏览器模型（可跑的那个）**：DeepSTARR CNN → ONNX **0.81MB**，max|Δ|=9.5e-7，Pearson 1.0；
+  test 指标复核 ρ=0.632/0.569（与 M2 训练脚本 0.639/0.566 一致）
+- **前端**：Vite + TS + onnxruntime-web（WASM），粘贴序列 → Dev/Hk 预测 + 逐碱基敏感度高亮
+  （单碱基饱和突变 747 变体批量前向，与 M4 归因同源）
+- **实测延迟**（浏览器内真实数字）：模型加载 0.2–0.4s；单序列推理 **2–15ms**；敏感度 **511–572ms**
+  （目标 <3s，达成）；演示 GIF 入库 `docs/assets/webapp_demo.gif`
+- Pages 部署工作流 `.github/workflows/pages.yml`
+
+### 坑（第 14-17 项）
+14. **ORT 量化器在路径分支写 "-inferred.onnx" 失败**：481MB 模型的 shape-inference 临时文件写不出来；
+    换成"内存 ModelProto + 纯英文临时目录"后 shape inference 能跑，但暴露导出图本身的形状声明冲突
+    （`Inferred shape ... dimension 0: (768) vs (2)`）→ int8 路线最终放弃，如实记录
+15. **fp16 在 CPU/WASM 不可用**：`Type (tensor(float16)) of output arg ... does not match expected tensor(float)`
+    ——onnxruntime CPU provider 加载即失败，所以 241MB 的 fp16 也不能当网页模型
+16. **含中文的路径会坑 onnx 的 C++ 文件写入**（诊断过程中的关键发现，写进 devlog 备查）
+17. **npm 新版默认拦 postinstall**：esbuild 二进制没装导致 vite build 失败 → 手动 `node node_modules/esbuild/install.js`
+
+### 决策记录（可讲）
+浏览器端用 CNN 而非 LoRA：体积（0.81MB vs 481MB）、WASM 可跑性（fp16/int8 都不可行）；
+但**最优模型的 ONNX 导出与一致性验证一样没省**，两者关系在 webapp/README 写清楚，不美化。

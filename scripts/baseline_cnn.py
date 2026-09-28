@@ -133,6 +133,13 @@ def train_one_seed(
 
     model.load_state_dict(best_state)
     model.eval()
+    # 保存最优权重：M5 浏览器 demo 用（CNN 是纯卷积，ONNX/WASM 友好；devlog M5 记录了取舍）
+    ckpt_dir = Path(__file__).resolve().parents[1] / "data" / "models" / "finetuned"
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {"state_dict": best_state, "seed": seed, "best_valid_mse": best_loss},
+        ckpt_dir / f"cnn_seed{seed}.pt",
+    )
     preds_valid = predict(model, tensors["x_valid"])
     preds_test = predict(model, tensors["x_test"])
     return preds_valid, preds_test

@@ -1,0 +1,24 @@
+{
+  "cnn": {
+    "parity": {
+      "max_abs_diff": 9.5367431640625e-07,
+      "pearson_Dev": 1.0,
+      "pearson_Hk": 1.0
+    },
+    "gate_pass": true,
+    "size_mb": 0.814791,
+    "single_latency_ms_cpu": 0.2,
+    "test_metrics_onnx": {
+      "Dev_log2_enrichment": {
+        "spearman": 0.6323914393453477,
+        "pearson": 0.6567097028848758,
+        "rmse": 1.1543090370296056
+      },
+      "Hk_log2_enrichment": {
+        "spearman": 0.56880219136674,
+        "pearson": 0.742506153121144,
+        "rmse": 1.1429444979369805
+      }
+    }
+  }
+}
