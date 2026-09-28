@@ -81,3 +81,23 @@ results/baseline.csv。
 - ③ 零样本打分：伪对数似然需 249×3 次前向 × 4 万序列 = 不可行；用 **embedding(均值池化)+Ridge 探针**（goal 明示允许），train 侧抽样 5 万条提特征（8GB 显存约束，如实记录）
 - CNN 用 3 个种子报均值±std；GBDT/Ridge 确定性单种子
 - 防泄漏红线：所有模型只见 train split，chr2R 的 valid/test 仅用于评估
+
+## 2026-09-28 · M2 进行中：baseline ①② 完成记录
+
+### 结果（test split，真实数字）
+| model | Dev Spearman | Hk Spearman | 备注 |
+|---|---|---|---|
+| ① kmer_gbm (k=6+GC, LightGBM) | 0.581 | 0.519 | 单种子42, CPU ~6min |
+| ② CNN (DeepSTARR风格) | **0.639 ± 0.003** | **0.566 ± 0.005** | 3 seeds (42/43/44), GPU |
+
+### 与官方 DeepSTARR 论文的差距（如实归因，不许美化）
+官方论文 test Pearson r≈0.93+，我们 CNN 只有 0.66/0.74。差距归因（待 M2 收尾验证）：
+1. **早停太急**：patience=5，16-17 epoch 就停了（官方训 200 epochs）
+2. 未复现官方超参细节（官方 batch 128 / 特定调度）
+3. lr 调度不同（我们 ReduceLROnPlateau）
+→ M2 的定位是 baseline 而非复现 SOTA：CNN > k-mer 符合预期（词袋无位置信息），
+这条差距线正是 M3 LoRA 微调要打穿的靶子。
+
+### 坑
+1. LightGBM 4.6 的 `eval_set` 参数已 deprecated（改 eval_X/eval_y）——仅警告，结果有效。
+2. CNN 显存策略生效：one-hot uint8 全量驻 GPU（400MB），float 按batch转，训练快且稳。
