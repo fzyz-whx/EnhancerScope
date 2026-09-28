@@ -207,3 +207,11 @@ results/baseline.csv。
 ### 冒烟结果（DNABERT-2 / seed 42 / 1 epoch，真实数字）
 - test: Dev ρ=0.579, Hk ρ=0.548；显存峰值 2.20GB；时长 15.9min/epoch
 - 对比 M2：已超零样本(+0.15/+0.19)、超 k-mer 的 Hk；逼近 CNN —— 1 epoch 即打平/超越 3/4 条 baseline
+
+### 坑续（第 6-8 坑，均为实测）
+6. **timeout 太短杀在评估边界**：每 seed `timeout 3000`（50min），而 3 epochs 训练需 47.3min，
+   最终评估+写 CSV 被砍 → 改为每 run `timeout 4600`（76min，留足余量）
+7. **torch>=2.6 的 `weights_only=True` 默认值拒绝自定义对象**：tokenize 缓存用 `torch.save(BatchEncoding)`，
+   `torch.load` 直接 `UnpicklingError`（seed 43/44 因此 0 epoch 崩溃）→ `torch.load(..., weights_only=False)`（本地可信缓存）
+8. **微调权重未持久化**（自查发现）：best_state 只在内存 → 补 `data/models/finetuned/lora_{model}_seed{N}.pt`
+   （LoRA adapter + pooler，~2.4MB，不入库），M4 可解释性与 M5 ONNX 导出依赖它

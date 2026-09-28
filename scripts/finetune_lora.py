@@ -169,7 +169,9 @@ def main() -> int:
     ):
         cache = tok_cache / f"{args.model}_{s}.pt"
         if cache.exists():
-            toks = torch.load(cache)
+            toks = torch.load(
+                cache, weights_only=False
+            )  # 本地可信缓存；torch>=2.6 默认 weights_only=True 会拒绝 BatchEncoding
             print(f"  {s}: 命中 tokenize 缓存 {cache.name}")
         else:
             toks = tokenizer(
@@ -295,6 +297,22 @@ def main() -> int:
 
     model.load_state_dict(best_state)
     pooler.load_state_dict(best_pooler)
+    # 持久化最优权重（LoRA adapter + pooler；~2.4MB/模型）——M4 可解释性与 M5 ONNX 导出的输入。
+    # 按 goal 规则不入库（data/ 已 gitignore），用脚本 + 本次运行日志复现。
+    ckpt_dir = ROOT / "data" / "models" / "finetuned"
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    ckpt = ckpt_dir / f"lora_{args.model}_seed{seed}.pt"
+    torch.save(
+        {
+            "lora_state_dict": {k: v for k, v in best_state.items() if "lora_" in k},
+            "pooler_state_dict": best_pooler,
+            "model": args.model,
+            "seed": seed,
+            "best_valid_mse": best_loss,
+        },
+        ckpt,
+    )
+    print(f"[lora:{args.model}] 权重已存 {ckpt}")
     model.eval()
     rows: list[dict] = []
     for split, df in (("valid", load_split("valid")), ("test", load_split("test"))):
