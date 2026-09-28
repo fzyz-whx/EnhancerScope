@@ -285,3 +285,23 @@ results/baseline.csv。
 
 ### 下一步（M5）
 最优模型 ONNX 导出 + Vite/TS 前端（粘贴序列 → 预测 + 按突变敏感度高亮碱基）+ GitHub Pages。
+
+## 2026-09-29 · M5 开工前计划（浏览器交互层）
+
+**目标**：把最优模型（LoRA DNABERT-2）导出 ONNX → Vite+TS 前端（粘贴 DNA 序列 → 预测 + 高亮碱基）
+→ GitHub Pages 部署；README 嵌 demo GIF；实测单序列延迟 <3s 记录在案。
+
+**关键风险与预案**
+1. **ONNX 导出可行性**（最大风险）：DNABERT-2 是 remote-code 自定义模型（ALiBi + 自定义
+   attention 回退 + tuple 返回）。预案：
+   a) 包一层 `OnnxWrapper`（只输出 (1,2) 张量，隐藏 tuple/中间量），eval + fp32 + 固定输入名
+   b) 导出后用 onnxruntime 与 PyTorch 做**数值一致性校验**（>0.999 相关或 max|Δ|<1e-3），
+      不一致就不发布——数字必须可信
+   c) 若自定义算子导致导出失败：如实记录 + 改导出 CNN baseline（纯 torch，必然可导），
+      文档写明"上线的不是最优模型"这一事实（不美化）
+2. **浏览器侧分词**：BPE tokenizer（tokenizer.json 167KB）在 JS 侧需要 transformers.js；
+   若集成不顺，退路是"服务端无关"的纯前端简化分词（不推荐）→ 优先解决 transformers.js
+3. **高亮逻辑**：必须与 M4 归因一致——用"单碱基替换敏感度"的前端近似（对每个位置做 3 次替换
+   前向代价过高）；改用**梯度/扰动的轻量近似**或预计算参数字典。方案：前端用
+   "逐位置置 N（遮蔽）"的 4 次前向批处理（249 次前向 batch=249 在 WASM 上约数百 ms）——
+   与 M4 的窗口遮蔽/突变法同源，文档中明确说明是近似并给出对比
