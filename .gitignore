@@ -45,3 +45,4 @@ artifacts/
 # M5：webapp 构建产物与依赖
 webapp/node_modules/
 webapp/dist/
+!results/onnx_parity.json

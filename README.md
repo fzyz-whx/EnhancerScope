@@ -8,6 +8,23 @@
 
 在 MPRA 增强子活性数据上，系统对比四个层次的方法：k-mer+GBDT → 轻量 CNN → 基因组语言模型零样本 → LoRA 微调，配合防泄漏的染色体级划分与可解释性分析。最终把最优模型做成浏览器里人人可用的交互工具，并封装为 LLM agent 的 MCP 插件。
 
+## 在线演示
+
+![浏览器演示](docs/assets/webapp_demo.gif)
+
+**[→ 打开在线演示](https://fzyz-whx.github.io/EnhancerScope/)**（粘贴 DNA → 预测增强子活性 + 逐碱基敏感度高亮）
+
+浏览器端真实实测（ONNX Runtime Web / WASM，本机 Chrome）：
+
+| 指标 | 实测值 |
+|---|---|
+| 模型加载 | 0.2–0.4 s（0.81MB ONNX，之后走 HTTP 缓存） |
+| 单序列推理 | **2–15 ms**（目标 <3 s） |
+| 逐碱基敏感度（747 条变体批量前向） | 511–572 ms |
+
+模型为 M2 基准中 Dev 侧最优的 DeepSTARR 风格 CNN；为何网页不直接跑 LoRA DNABERT-2（481MB）、
+以及两者的 ONNX 数值一致性，见 [webapp/README](webapp/README.md) 与 `results/onnx_parity.json`。
+
 ## Benchmark（test split，Spearman ρ，越大越好）
 
 | 模型 | Dev（发育型） | Hk（管家型） | 说明 |
