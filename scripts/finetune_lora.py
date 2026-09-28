@@ -38,6 +38,18 @@ CONFIG = json.loads((ROOT / "configs" / "lora.json").read_text(encoding="utf-8")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def hidden_of(model, input_ids, attention_mask):
+    """兼容自定义模型的三个坑（devlog M3 实录）：
+    1. DNABERT-2 标准注意力回退路径返回 tuple(last_hidden_state, pooled) 而非 ModelOutput
+    2. HyenaDNA 的 forward 不接受 attention_mask 关键字
+    """
+    try:
+        raw = model(input_ids=input_ids, attention_mask=attention_mask)
+    except TypeError:
+        raw = model(input_ids=input_ids)
+    return raw[0] if isinstance(raw, tuple) else raw.last_hidden_state
+
+
 def append_rows(rows: list[dict]) -> None:
     import pandas as pd
 
@@ -71,9 +83,9 @@ def predict(
 ) -> np.ndarray:
     out = []
     for i in range(0, x_ids.shape[0], batch):
-        h = model(
-            input_ids=x_ids[i : i + batch], attention_mask=x_mask[i : i + batch]
-        ).last_hidden_state
+        h = hidden_of(
+            model, input_ids=x_ids[i : i + batch], attention_mask=x_mask[i : i + batch]
+        )
         out.append(pooler(h, x_mask[i : i + batch]).float().cpu().numpy())
     return np.concatenate(out)
 
@@ -97,10 +109,12 @@ def main() -> int:
     print(f"[lora:{args.model}] 来源={model_path} seed={seed} device={DEVICE}")
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
-        model_path, trust_remote_code=True, torch_dtype=torch.bfloat16
-    ).to(DEVICE)
-    hidden_size = model.config.hidden_size
+    # DNABERT-2 自定义代码有 dtype 硬编码缺陷（标准注意力回退路径 Float vs BFloat16 混算会炸，
+    # devlog M3 有实录）→ fp32 加载权重 + 训练循环 autocast(bf16) 承担混合精度
+    model = AutoModel.from_pretrained(model_path, trust_remote_code=True).to(DEVICE)
+    hidden_size = (
+        getattr(model.config, "hidden_size", None) or model.config.d_model
+    )  # HyenaDNA 用 d_model
     print(
         f"[lora:{args.model}] hidden={hidden_size} 参数量={sum(p.numel() for p in model.parameters()) / 1e6:.1f}M"
     )
@@ -146,16 +160,28 @@ def main() -> int:
     # tokenize（一次性）
     print("[lora] tokenize 中...")
     enc = {}
+    tok_cache = ROOT / "data" / "processed" / "tokenized"
+    tok_cache.mkdir(parents=True, exist_ok=True)
     for s, df in (
         ("train", load_split("train")),
         ("valid", load_split("valid")),
         ("test", load_split("test")),
     ):
-        toks = tokenizer(
-            list(df["sequence"]), padding=True, truncation=True, return_tensors="pt"
-        )
+        cache = tok_cache / f"{args.model}_{s}.pt"
+        if cache.exists():
+            toks = torch.load(cache)
+            print(f"  {s}: 命中 tokenize 缓存 {cache.name}")
+        else:
+            toks = tokenizer(
+                list(df["sequence"]),
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="pt",
+            )
+            torch.save(toks, cache)
+            print(f"  {s}: ids {tuple(toks['input_ids'].shape)}（已缓存）")
         enc[s] = (toks["input_ids"], toks["attention_mask"])
-        print(f"  {s}: ids {tuple(toks['input_ids'].shape)}")
 
     ids = {s: enc[s][0].to(DEVICE) for s in enc}
     mask = {s: enc[s][1].to(DEVICE) for s in enc}
@@ -195,9 +221,11 @@ def main() -> int:
             with torch.autocast(
                 device_type="cuda", dtype=scaler_dtype, enabled=DEVICE.type == "cuda"
             ):
-                h = model(
-                    input_ids=ids["train"][idx], attention_mask=mask["train"][idx]
-                ).last_hidden_state
+                h = hidden_of(
+                    model,
+                    input_ids=ids["train"][idx],
+                    attention_mask=mask["train"][idx],
+                )
                 pred = pooler(h, mask["train"][idx])
                 loss = loss_fn(pred, y["train"][idx]) / accum
             loss.backward()
@@ -209,10 +237,11 @@ def main() -> int:
         with torch.no_grad():
             vl = 0.0
             for i in range(0, ids["valid"].shape[0], 128):
-                h = model(
+                h = hidden_of(
+                    model,
                     input_ids=ids["valid"][i : i + 128],
                     attention_mask=mask["valid"][i : i + 128],
-                ).last_hidden_state
+                )
                 vl += (
                     loss_fn(
                         pooler(h, mask["valid"][i : i + 128]), y["valid"][i : i + 128]
@@ -272,10 +301,11 @@ def main() -> int:
         with torch.no_grad():
             p_all = []
             for i in range(0, ids[split].shape[0], 64):
-                h = model(
+                h = hidden_of(
+                    model,
                     input_ids=ids[split][i : i + 64],
                     attention_mask=mask[split][i : i + 64],
-                ).last_hidden_state
+                )
                 p_all.append(pooler(h, mask[split][i : i + 64]).float().cpu().numpy())
             preds = np.concatenate(p_all)
         for ti, task in enumerate(TARGETS):

@@ -1,17 +1,29 @@
 {
   "seed": 42,
-  "seeds": [42, 43, 44],
-  "targets": ["Dev_log2_enrichment", "Hk_log2_enrichment"],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "targets": [
+    "Dev_log2_enrichment",
+    "Hk_log2_enrichment"
+  ],
   "lora": {
     "r": 16,
     "lora_alpha": 32,
     "lora_dropout": 0.1,
     "bias": "none",
     "target_modules": {
-      "dnabert2": ["query", "value"],
-      "hyenadna": ["in_proj", "out_proj"]
+      "dnabert2": [
+        "Wqkv"
+      ],
+      "hyenadna": [
+        "in_proj",
+        "out_proj"
+      ]
     },
-    "note": "r=16/alpha=32: DNABERT-2 论文常用起点；BERT 系 attention 只挂 query/value 是标准选择；HyenaDNA 的 HyenaOperator 用 in_proj/out_proj（跑时按 named_modules 实测确认）"
+    "note": "r=16/alpha=32: DNABERT-2 论文常用起点；实测（scripts/finetune_lora.py 打印顶层名）DNABERT-2 的 attention 是融合 Wqkv 投影（无独立 query/value），故 target=Wqkv；HyenaDNA 的 HyenaOperator 用 in_proj/out_proj（跑时实测确认）"
   },
   "train": {
     "batch_size": 32,
@@ -32,7 +44,7 @@
     },
     "hyenadna": {
       "hub": "LongSafari/hyenadna-small-32k-seqlen-hf",
-      "local": null,
+      "local": "data/models/hyenadna-small-32k",
       "pooling": "mean",
       "note": "small-32k 支持长序列对 249bp 绰绰有余；参数量跑时实测"
     }

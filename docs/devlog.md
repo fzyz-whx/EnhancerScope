@@ -184,3 +184,26 @@ results/baseline.csv。
 - [x] README benchmark 表（三行对比 + 复现命令 + 差距归因）
 - [x] 固定随机种子（42/43/44），脚本一键复现
 - [x] 局限如实记录（notes 列 + devlog），未隐藏未弱化
+
+## 2026-09-28 · M3 进行中：模型加载五连坑与兼容修复
+
+### 坑与解法（全部实测，非推测）
+1. **target_modules 命名不符**：配置写了 BERT 系标准的 query/value，实测打印顶层名发现 DNABERT-2 的
+   attention 是**融合 Wqkv 投影**（无独立 query/value）→ 改 `["Wqkv"]`。HyenaDNA 实测为 `in_proj/out_proj` ✓
+2. **返回类型是 tuple 不是 ModelOutput**：DNABERT-2 标准注意力回退路径返回
+   `(last_hidden_state, pooled)` → `.last_hidden_state` 报 AttributeError → 加 `hidden_of()` 兼容层
+3. **dtype 硬编码缺陷**：bf16 加载时标准注意力回退路径 `Float vs BFloat16` 混算崩 →
+   **fp32 加载权重 + 训练 autocast(bf16)** 承担混合精度（goal 的 bf16 约束由 autocast 满足，如实记录）
+4. **gradient checkpointing 不兼容**：DNABERT-2 自定义 BertModel 不支持 → 脚本 try/except 降级并打印；
+   实测显存峰值仅 **2.20GB**（8GB 卡余量充足，无需 checkpointing 也能跑）
+5. **tokenize 慢（9 分钟/次）**：484k 条 BPE 编码 → 加 tokenize 缓存（data/processed/tokenized/*.pt，
+   按 model+split 命名），3 seeds 省 ~18 分钟
+
+### HyenaDNA 实测（CPU 探测，未占 GPU）
+- 3.3M 参数（small-32k），hidden=d_model（不是 hidden_size）
+- forward **不接受 attention_mask** → hidden_of 加了 TypeError 回退
+- tokenizer 是单碱基级（HyenaDNATokenizer），249bp → 249 tokens
+
+### 冒烟结果（DNABERT-2 / seed 42 / 1 epoch，真实数字）
+- test: Dev ρ=0.579, Hk ρ=0.548；显存峰值 2.20GB；时长 15.9min/epoch
+- 对比 M2：已超零样本(+0.15/+0.19)、超 k-mer 的 Hk；逼近 CNN —— 1 epoch 即打平/超越 3/4 条 baseline
