@@ -241,3 +241,21 @@ results/baseline.csv。
 - 6 个 run 全部：固定种子（42/43/44）、超参在 configs/lora.json、结果可追溯到 results/lora.csv + logs/*.json
 - 微调权重持久化：data/models/finetuned/lora_{model}_seed{N}.pt（2.4MB/个，不入库，M4/M5 复用）
 - 训练曲线（均值±std）：results/figures/lora_curves.png；聚合表：results/lora_summary.md
+
+## 2026-09-29 · M4 开工前计划（可解释性分析）
+
+**目标**：对最优模型（LoRA DNABERT-2，按 valid MSE 选种子）做归因分析，产出 docs/interpretability.md
+（≥3 个完整案例：序列 → 归因图 → motif 命中 → 文献佐证）。
+
+**方法设计**
+- **in-silico 突变扫描**（主方法，goal 明示）：逐位置替换为其余 3 种碱基，测 Δ预测（Dev/Hk），
+  得到 per-base 重要度曲线——无需梯度、确定性、直接对应生物学语义（"这个位点变了活性会怎样"）
+- **saliency（梯度归因）**：对 embedding 求 ∂output/∂embedding，再按 token→碱基映射回 249bp 位置
+  （DNABERT-2 是 BPE 6-mer，需处理 token 边界：token 内碱基均分梯度）
+- **motif 对照**：JASPAR CORE insects（果蝇）PWM + 自实现 log-odds 扫描器（小工具，也是可讲点）；
+  高归因位点与 motif 命中位置的重叠率作为量化指标
+- **≥3 个案例**：优先选 test 集高活性序列 + 归因清晰的例子；归因与生物学不符时如实分析
+
+**风险预判**
+1. JASPAR 下载可能被墙 → 备选：geco/本地化 PWM 集（如实标注来源）
+2. BPE 边界导致 per-base 归因不精确 → 用突变扫描作为主证据，梯度归因作辅证（两条路互相印证）
