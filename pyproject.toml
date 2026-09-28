@@ -11,6 +11,7 @@ dependencies = [
     "numpy>=2.4.6",
     "pandas>=3.0.6",
     "pyarrow>=25.0.1",
+    "scipy>=1.16",
 ]
 
 [project.scripts]
@@ -25,6 +26,15 @@ dev = [
     "ipykernel>=7.3.0",
     "nbconvert>=7.17.1",
 ]
+# ML 依赖单独成组：CI 只跑 CPU 单测不装 torch（goal 硬约束）；本地 `uv sync --all-groups`。
+# torch 走上海交大 pytorch-wheels 镜像（download.pytorch.org 经代理不可达，见 devlog M2）；
+# RTX 5060 = Blackwell sm_120，需 cu128 轮子（tuna PyPI 的 win wheel 无 CUDA 变体）。
+ml = [
+    "torch>=2.7.1",
+    "lightgbm>=4.6",
+    "scikit-learn>=1.7",
+    "transformers>=4.51",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -33,6 +43,14 @@ build-backend = "hatchling.build"
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://mirror.sjtu.edu.cn/pytorch-wheels/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/enhancerscope"]
