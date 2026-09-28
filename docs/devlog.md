@@ -382,3 +382,25 @@ results/baseline.csv。
     修法：只在"无换行且长度 <4096"时才探测路径，并把 `OSError` 一并兜住。
     → 教训：**本地绿 ≠ CI 绿**；另外这一轮我误在 CI 失败时合并了 PR#7（流程失误，已记录），
     修复走独立分支 `fix/m6-parse-fasta` + 新 PR 重新过 CI。
+
+## 2026-09-29 · M7 开工前计划（发布打磨）
+
+**交付清单**
+1. `docs/decisions.md` —— 一问一答式决策记录（数据集选型/划分策略/LoRA 而非全参/浏览器用 CNN/
+   一致性闸门/MCP 依赖分层/网络坑的处理），每条含"选项-决定-理由-代价"
+2. `docs/interview-qa.md` —— ≥15 个预期面试问答（DNABERT-2 vs HyenaDNA 架构、LoRA 原理、
+   为何按染色体防泄漏、负结果归因、工程取舍、可解释性方法学）
+3. README 终稿 —— 项目故事线 + ASCII 架构图 + benchmark 表 + demo GIF + 数据集/模型引用 +
+   英文 TL;DR + FAQ（含 hf-mirror 与 ONNX 导出路径）
+4. 中文技术博客 `docs/blog.md`（可发布稿；本机无法访问知乎/博客园，稿子入库并在 Release notes 中标注）
+5. `v1.0.0` tag + GitHub Release（含 LoRA ONNX 481MB 资产上传）
+
+## 2026-09-29 · M7 完成记录（发布打磨）
+
+- `docs/decisions.md`：8 条一问一答决策（数据集选型 / 染色体划分 / LoRA vs 全参 / fp32+autocast /
+  浏览器用 CNN / 扰动归因 / 受限网络工程 / 依赖分层），每条含选项-决定-理由-代价
+- `docs/interview-qa.md`：17 个预期面试问答，全部挂真实数字与"证据文件位置"
+- `README 终稿`：核心结论三条 + ASCII 架构图 + benchmark 表 + demo GIF + 在线链接 +
+  数据/模型/motif/方法四处引用 + FAQ（hf-mirror、ML 分组、ONNX 复现、为何不入库）+ 路线图全勾
+- `docs/blog.md`：中文技术博客可发布稿（讲设计决策与踩坑，含负结果与流程失误）
+- Release v1.0.0：tag + Release notes + LoRA ONNX 资产（若上传受网络限制，则在 notes 里给出本地导出命令）
