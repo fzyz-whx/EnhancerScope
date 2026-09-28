@@ -21,3 +21,8 @@ results/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# EDA 图表（DoD 交付物，小 PNG 入库）
+!results/figures
+results/figures/*
+!results/figures/*.png
